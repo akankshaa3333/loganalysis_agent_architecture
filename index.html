@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>AI Powered Log Analysis Agent</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#04060D;--bg2:#080C18;--card:#0B1120;--card2:#0F1829;
+  --border:#162038;--border2:#1E2D4A;
+  --orange:#FF9A00;--orangeL:#FFB740;
+  --blue:#4D9FFF;--teal:#00E5C3;--green:#3DDD90;
+  --purple:#A97FFF;--pink:#FF5FA0;
+  --text:#EDF2FF;--muted:#5A7399;--dim:#2A3A55;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(77,159,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(77,159,255,.04) 1px,transparent 1px);background-size:48px 48px;pointer-events:none}
+body::after{content:'';position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(77,100,255,.12) 0%,transparent 70%);pointer-events:none}
+#canvas{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.55}
+
+/* HERO */
+.hero{position:relative;z-index:10;text-align:center;padding:72px 24px 48px}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--teal);background:rgba(0,229,195,.07);border:1px solid rgba(0,229,195,.2);padding:8px 20px;border-radius:30px;margin-bottom:36px}
+.eyebrow-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);animation:blink 1.5s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
+.hero-title{font-family:'Orbitron',monospace;font-size:clamp(26px,5vw,68px);font-weight:900;line-height:1.08;letter-spacing:-1px}
+.ht-ai{background:linear-gradient(90deg,#4D9FFF,#A97FFF,#FF5FA0);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.ht-rest{color:var(--text);display:block}
+.ht-log{background:linear-gradient(90deg,#FF9A00,#FFB740,#FF5FA0);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:block}
+.ht-agent{color:rgba(237,242,255,.18);display:block;font-size:.72em;letter-spacing:12px;font-weight:400;margin-top:8px}
+.hero-sub{margin:28px auto 0;font-size:16px;color:var(--muted);max-width:560px;line-height:1.75;font-weight:300}
+.hero-sub strong{color:var(--text);font-weight:500}
+.stats{display:flex;justify-content:center;gap:40px;flex-wrap:wrap;margin-top:48px}
+.stat{text-align:center}
+.stat-n{font-family:'Orbitron',monospace;font-size:28px;font-weight:700;background:linear-gradient(135deg,var(--orange),var(--orangeL));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.stat-l{font-size:11px;color:var(--muted);letter-spacing:1.5px;margin-top:4px;font-family:'JetBrains Mono',monospace}
+
+/* ONE LINER */
+.oneliner{position:relative;z-index:10;max-width:980px;margin:56px auto 64px;padding:0 24px}
+.ol-wrap{background:var(--card);border:1px solid var(--border2);border-radius:16px;padding:22px 28px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;position:relative;overflow:hidden}
+.ol-label{position:absolute;top:8px;left:16px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--dim)}
+.ol-chip{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;padding:6px 14px;border-radius:8px;margin-top:4px}
+.ol-sep{color:var(--dim);font-size:20px;font-weight:200}
+
+/* FLOW */
+.flow{position:relative;z-index:10;max-width:900px;margin:0 auto;padding:0 24px 80px;display:flex;flex-direction:column;align-items:center}
+
+/* CARD */
+.node{width:100%;position:relative}
+.card{background:var(--card);border-radius:24px;border:1px solid var(--border2);overflow:hidden;position:relative;transition:transform .3s ease,border-color .3s ease}
+.card:hover{transform:translateY(-4px);border-color:var(--ac,var(--orange))}
+.card-glow{height:3px;background:linear-gradient(90deg,transparent,var(--ac,var(--orange)),transparent)}
+.card-body{padding:28px 30px 26px}
+.card-head{display:flex;align-items:flex-start;gap:18px;margin-bottom:18px}
+.svc-icon{width:56px;height:56px;flex-shrink:0;border-radius:14px;border:1px solid var(--border2);background:rgba(255,255,255,.03);display:flex;align-items:center;justify-content:center}
+.svc-icon svg{width:28px;height:28px}
+.head-text{flex:1}
+.layer-tag{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2.5px;color:var(--ac,var(--orange));margin-bottom:5px;opacity:.9}
+.card-title{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:var(--text);line-height:1.2}
+.card-title small{display:block;font-size:13px;font-weight:400;color:var(--muted);margin-top:3px;font-family:'JetBrains Mono',monospace}
+.card-desc{font-size:14px;color:var(--muted);line-height:1.7;font-weight:300}
+.res-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(0,0,0,.35);border:1px solid var(--border2);border-left:3px solid var(--ac,var(--orange));border-radius:8px;padding:9px 14px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);margin-top:16px}
+.res-badge .live{width:6px;height:6px;border-radius:50%;background:var(--ac,var(--orange));animation:glow-pulse 2s ease-in-out infinite;flex-shrink:0}
+@keyframes glow-pulse{0%,100%{box-shadow:0 0 4px var(--ac,var(--orange))}50%{box-shadow:0 0 14px var(--ac,var(--orange))}}
+.tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.tag{font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--muted)}
+.tag.hi{background:rgba(var(--acr,255,154,0),.08);border-color:rgba(var(--acr,255,154,0),.22);color:var(--ac,var(--orange))}
+.codeblock{background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-top:16px}
+.codeblock .cbh{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2.5px;color:var(--dim);margin-bottom:10px}
+.codeblock pre{font-family:'JetBrains Mono',monospace;font-size:12px;color:#8BA5C8;line-height:1.85;white-space:pre-wrap}
+.k{color:#7EC8E3}.v{color:#78D97C}.s{color:#E06C75}.n{color:#FF9A00}
+.ddb-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+@media(max-width:560px){.ddb-grid{grid-template-columns:1fr}}
+.ddb-cell{background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.ddb-cell-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--teal);margin-bottom:10px}
+.ddb-cell pre{font-family:'JetBrains Mono',monospace;font-size:12px;color:#8BA5C8;line-height:1.85;white-space:pre-wrap}
+.twin{display:grid;grid-template-columns:1fr 48px 1fr;gap:12px;align-items:center;margin-top:16px}
+@media(max-width:560px){.twin{grid-template-columns:1fr;gap:8px}}
+.twin-cell{background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.twin-cell-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--purple);margin-bottom:6px}
+.twin-cell-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
+.twin-cell-desc{font-size:12px;color:var(--muted);line-height:1.55}
+.twin-mid{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.twin-mid span{font-size:11px;color:var(--dim);font-family:'JetBrains Mono',monospace}
+.step-ghost{position:absolute;top:16px;right:22px;font-family:'Orbitron',monospace;font-size:80px;font-weight:900;color:rgba(255,255,255,.025);line-height:1;user-select:none;pointer-events:none}
+
+/* CONNECTOR */
+.conn{height:76px;display:flex;flex-direction:column;align-items:center;position:relative}
+.conn-top-dot{width:10px;height:10px;border-radius:50%;border:2px solid var(--fc,var(--orange));background:rgba(0,0,0,.6);flex-shrink:0;box-shadow:0 0 10px var(--fc,var(--orange))}
+.conn-pipe{flex:1;width:2px;background:linear-gradient(to bottom,var(--fc,var(--orange)),var(--tc,var(--blue)));position:relative;overflow:hidden}
+.conn-pipe::after{content:'';position:absolute;top:-20px;left:0;right:0;height:20px;background:white;border-radius:50%;filter:blur(4px);opacity:.65;animation:drop var(--spd,1.1s) linear infinite var(--dlay,0s)}
+.conn-pipe-b{flex:1;width:2px;background:linear-gradient(to bottom,var(--fc,var(--orange)),var(--tc,var(--blue)));position:relative;overflow:hidden}
+.conn-pipe-b::after{content:'';position:absolute;top:-20px;left:0;right:0;height:20px;background:white;border-radius:50%;filter:blur(4px);opacity:.65;animation:drop var(--spd,1.1s) linear infinite calc(var(--dlay,0s) + .55s)}
+@keyframes drop{0%{top:-20px;opacity:0}15%{opacity:.7}85%{opacity:.5}100%{top:calc(100% + 20px);opacity:0}}
+.conn-mid{flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;padding:5px 14px;border-radius:20px;background:var(--bg);border:1px solid var(--border2);color:var(--muted);white-space:nowrap}
+.conn-arrowhead{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid var(--tc,var(--blue));flex-shrink:0}
+
+/* FOOTER */
+footer{position:relative;z-index:10;text-align:center;padding:0 24px 64px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--dim)}
+footer em{color:var(--orange);font-style:normal}
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<div class="hero">
+  <div class="hero-eyebrow"><span class="eyebrow-dot"></span>AWS SERVERLESS · BEDROCK AI · EVENT-DRIVEN</div>
+  <div class="hero-title">
+    <span class="ht-ai">AI</span>
+    <span class="ht-rest">POWERED</span>
+    <span class="ht-log">LOG ANALYSIS</span>
+    <span class="ht-agent">AGENT</span>
+  </div>
+  <p class="hero-sub">A fully <strong>serverless, intelligent pipeline</strong> that ingests raw logs at scale, detects anomalies using <strong>Amazon Bedrock</strong>, tracks state in DynamoDB, and delivers AI-generated reports via email.</p>
+  <div class="stats">
+    <div class="stat"><div class="stat-n">7</div><div class="stat-l">AWS SERVICES</div></div>
+    <div class="stat"><div class="stat-n">2K</div><div class="stat-l">LOGS / RUN</div></div>
+    <div class="stat"><div class="stat-n">0</div><div class="stat-l">SERVERS</div></div>
+    <div class="stat"><div class="stat-n">∞</div><div class="stat-l">SCALABILITY</div></div>
+  </div>
+</div>
+
+<div class="oneliner">
+  <div class="ol-wrap">
+    <span class="ol-label">ARCHITECTURE FLOW</span>
+    <span class="ol-chip" style="background:rgba(255,154,0,.1);color:#FF9A00;border:1px solid rgba(255,154,0,.25)">S3</span>
+    <span class="ol-sep">→</span>
+    <span class="ol-chip" style="background:rgba(77,159,255,.1);color:#4D9FFF;border:1px solid rgba(77,159,255,.25)">Athena</span>
+    <span class="ol-sep">→</span>
+    <span class="ol-chip" style="background:rgba(61,221,144,.1);color:#3DDD90;border:1px solid rgba(61,221,144,.25)">Lambda</span>
+    <span class="ol-sep">→</span>
+    <span class="ol-chip" style="background:rgba(0,229,195,.1);color:#00E5C3;border:1px solid rgba(0,229,195,.25)">DynamoDB</span>
+    <span class="ol-sep">→</span>
+    <span class="ol-chip" style="background:rgba(255,183,64,.1);color:#FFB740;border:1px solid rgba(255,183,64,.25)">S3</span>
+    <span class="ol-sep">→</span>
+    <span class="ol-chip" style="background:rgba(169,127,255,.1);color:#A97FFF;border:1px solid rgba(169,127,255,.25)">Bedrock</span>
+    <span class="ol-sep">→</span>
+    <span class="ol-chip" style="background:rgba(255,95,160,.1);color:#FF5FA0;border:1px solid rgba(255,95,160,.25)">SNS</span>
+  </div>
+</div>
+
+<div class="flow">
+
+  <!-- 01 S3 RAW -->
+  <div class="node"><div class="card" style="--ac:var(--orange)">
+    <div class="card-glow"></div><div class="step-ghost">01</div>
+    <div class="card-body">
+      <div class="card-head">
+        <div class="svc-icon"><svg viewBox="0 0 40 40" fill="none"><path d="M20 6L36 13V27L20 34L4 27V13Z" stroke="#FF9A00" stroke-width="1.5" fill="none"/><path d="M4 13L20 20L36 13M20 20V34" stroke="#FF9A00" stroke-width="1.5"/><circle cx="20" cy="20" r="3" fill="#FF9A00" opacity=".5"/></svg></div>
+        <div class="head-text">
+          <div class="layer-tag">LAYER 01 — LOG INGESTION</div>
+          <div class="card-title">Amazon S3 <small>Raw log storage — source of truth</small></div>
+        </div>
+      </div>
+      <div class="card-desc">Real-time application logs arrive here continuously in Parquet format. Acts as the entry point of the entire pipeline — millions of log events, perfectly partitioned and ready for serverless querying.</div>
+      <div class="res-badge"><span class="live"></span>my-agent-logs-akanksha</div>
+      <div class="tags">
+        <span class="tag hi" style="--acr:255,154,0;--ac:var(--orange)">Parquet format</span>
+        <span class="tag">logs/app-log-*.parquet</span>
+        <span class="tag">Real-time ingestion</span>
+      </div>
+    </div>
+  </div></div>
+
+  <div class="conn" style="--fc:var(--orange);--tc:var(--blue)">
+    <div class="conn-top-dot"></div>
+    <div class="conn-pipe" style="--spd:1.0s;--dlay:0s"></div>
+    <div class="conn-mid">Parquet files queried</div>
+    <div class="conn-pipe-b" style="--spd:1.0s"></div>
+    <div class="conn-arrowhead" style="--tc:var(--blue)"></div>
+  </div>
+
+  <!-- 02 ATHENA -->
+  <div class="node"><div class="card" style="--ac:var(--blue)">
+    <div class="card-glow" style="background:linear-gradient(90deg,transparent,var(--blue),transparent)"></div><div class="step-ghost">02</div>
+    <div class="card-body">
+      <div class="card-head">
+        <div class="svc-icon"><svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="12" stroke="#4D9FFF" stroke-width="1.5"/><path d="M14 20h12M20 14v12" stroke="#4D9FFF" stroke-width="1.5" stroke-linecap="round"/><circle cx="20" cy="20" r="3.5" fill="#4D9FFF" opacity=".6"/><circle cx="20" cy="8" r="2" fill="#4D9FFF" opacity=".3"/><circle cx="20" cy="32" r="2" fill="#4D9FFF" opacity=".3"/><circle cx="8" cy="20" r="2" fill="#4D9FFF" opacity=".3"/><circle cx="32" cy="20" r="2" fill="#4D9FFF" opacity=".3"/></svg></div>
+        <div class="head-text">
+          <div class="layer-tag" style="color:var(--blue)">LAYER 02 — QUERY ENGINE</div>
+          <div class="card-title">Amazon Athena <small>Serverless SQL over S3</small></div>
+        </div>
+      </div>
+      <div class="card-desc">Queries only the required logs from the last 24 hours — no full scans, no wasted compute. Detects new vs already-processed files and fetches a precise slice of up to 2000 records.</div>
+      <div class="codeblock">
+        <div class="cbh">SQL QUERY</div>
+        <pre><span class="k">SELECT</span> log, put_time
+<span class="k">FROM</span>   parquet_logs.logs
+<span class="k">WHERE</span>  <span class="s">"$path"</span> <span class="k">IN</span> (...)
+<span class="k">LIMIT</span>  <span class="n">2000</span></pre>
+      </div>
+      <div class="tags">
+        <span class="tag hi" style="--acr:77,159,255;--ac:var(--blue)">Last 24h only</span>
+        <span class="tag">New file detection</span>
+        <span class="tag">Zero servers</span>
+      </div>
+    </div>
+  </div></div>
+
+  <div class="conn" style="--fc:var(--blue);--tc:var(--green)">
+    <div class="conn-top-dot" style="--fc:var(--blue)"></div>
+    <div class="conn-pipe" style="--spd:1.15s;--dlay:.1s"></div>
+    <div class="conn-mid">Filtered log rows</div>
+    <div class="conn-pipe-b" style="--spd:1.15s;--dlay:.6s"></div>
+    <div class="conn-arrowhead" style="--tc:var(--green)"></div>
+  </div>
+
+  <!-- 03 LAMBDA -->
+  <div class="node"><div class="card" style="--ac:var(--green)">
+    <div class="card-glow" style="background:linear-gradient(90deg,transparent,var(--green),transparent)"></div><div class="step-ghost">03</div>
+    <div class="card-body">
+      <div class="card-head">
+        <div class="svc-icon"><svg viewBox="0 0 40 40" fill="none"><rect x="7" y="7" width="26" height="26" rx="6" stroke="#3DDD90" stroke-width="1.5"/><path d="M13 27L19 13L23 21L27 16L29 21" stroke="#3DDD90" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="head-text">
+          <div class="layer-tag" style="color:var(--green)">LAYER 03 — PREPROCESSING</div>
+          <div class="card-title">fetch_logs_lambda <small>AWS Lambda — pipeline orchestrator</small></div>
+        </div>
+      </div>
+      <div class="card-desc">The pipeline's orchestrator. Pulls Athena results, scrubs sensitive fields, generates a structured summary JSON, updates DynamoDB state, and triggers the Bedrock analysis stage.</div>
+      <div class="tags">
+        <span class="tag hi" style="--acr:61,221,144;--ac:var(--green)">Fetch from Athena</span>
+        <span class="tag">Sanitize PII</span>
+        <span class="tag">Generate summary</span>
+        <span class="tag">Update state</span>
+        <span class="tag">Trigger next stage</span>
+      </div>
+    </div>
+  </div></div>
+
+  <div class="conn" style="--fc:var(--green);--tc:var(--teal)">
+    <div class="conn-top-dot" style="--fc:var(--green)"></div>
+    <div class="conn-pipe" style="--spd:.9s;--dlay:0s"></div>
+    <div class="conn-mid">State write + summary</div>
+    <div class="conn-pipe-b" style="--spd:.9s;--dlay:.45s"></div>
+    <div class="conn-arrowhead" style="--tc:var(--teal)"></div>
+  </div>
+
+  <!-- 04 DYNAMODB -->
+  <div class="node"><div class="card" style="--ac:var(--teal)">
+    <div class="card-glow" style="background:linear-gradient(90deg,transparent,var(--teal),transparent)"></div><div class="step-ghost">04</div>
+    <div class="card-body">
+      <div class="card-head">
+        <div class="svc-icon"><svg viewBox="0 0 40 40" fill="none"><ellipse cx="20" cy="12" rx="12" ry="4.5" stroke="#00E5C3" stroke-width="1.5"/><path d="M8 12v16c0 2.5 5.4 4.5 12 4.5s12-2 12-4.5V12" stroke="#00E5C3" stroke-width="1.5"/><path d="M8 20c0 2.5 5.4 4.5 12 4.5s12-2 12-4.5" stroke="#00E5C3" stroke-width="1.5"/></svg></div>
+        <div class="head-text">
+          <div class="layer-tag" style="color:var(--teal)">LAYER 04 — STATE MANAGEMENT 🔥</div>
+          <div class="card-title">Amazon DynamoDB <small>log-analysis-state</small></div>
+        </div>
+      </div>
+      <div class="card-desc">The system's memory. Tracks every processed file to prevent duplicate analysis, and stores a real-time pointer to the latest summary so Bedrock always knows exactly where to look.</div>
+      <div class="ddb-grid">
+        <div class="ddb-cell">
+          <div class="ddb-cell-label">RECORD A — PROCESSED FILES</div>
+          <pre><span class="k">"id"</span>: <span class="s">"analyzed_files"</span>,
+<span class="k">"files"</span>: [
+  <span class="v">"app-log-1"</span>,
+  <span class="v">"app-log-2"</span>
+]</pre>
+        </div>
+        <div class="ddb-cell">
+          <div class="ddb-cell-label">RECORD B — LATEST SUMMARY</div>
+          <pre><span class="k">"id"</span>: <span class="s">"latest_summary"</span>,
+<span class="k">"file"</span>: <span class="v">"summaries/
+  log_summary_123.json"</span></pre>
+        </div>
+      </div>
+    </div>
+  </div></div>
+
+  <div class="conn" style="--fc:var(--teal);--tc:var(--orangeL)">
+    <div class="conn-top-dot" style="--fc:var(--teal)"></div>
+    <div class="conn-pipe" style="--spd:1.3s;--dlay:.2s"></div>
+    <div class="conn-mid">Write summary JSON</div>
+    <div class="conn-pipe-b" style="--spd:1.3s;--dlay:.65s"></div>
+    <div class="conn-arrowhead" style="--tc:var(--orangeL)"></div>
+  </div>
+
+  <!-- 05 S3 PROCESSED -->
+  <div class="node"><div class="card" style="--ac:var(--orangeL)">
+    <div class="card-glow" style="background:linear-gradient(90deg,transparent,var(--orangeL),transparent)"></div><div class="step-ghost">05</div>
+    <div class="card-body">
+      <div class="card-head">
+        <div class="svc-icon"><svg viewBox="0 0 40 40" fill="none"><path d="M20 6L36 13V27L20 34L4 27V13Z" stroke="#FFB740" stroke-width="1.5" fill="none"/><path d="M4 13L20 20L36 13M20 20V34" stroke="#FFB740" stroke-width="1.5"/><circle cx="20" cy="20" r="4" fill="#FFB740" opacity=".7"/><circle cx="20" cy="20" r="2" fill="#FFB740"/></svg></div>
+        <div class="head-text">
+          <div class="layer-tag" style="color:var(--orangeL)">LAYER 05 — PROCESSED DATA STORE</div>
+          <div class="card-title">Amazon S3 <small>Sanitized summaries bucket</small></div>
+        </div>
+      </div>
+      <div class="card-desc">Cleaned, structured summaries stored as JSON. This is what Bedrock's Lambda reads — sanitized data, no sensitive fields, perfectly formatted for AI consumption.</div>
+      <div class="res-badge" style="--ac:var(--orangeL)"><span class="live" style="background:var(--orangeL)"></span>log-analysis-processed</div>
+      <div class="codeblock">
+        <div class="cbh">STORED FILE PATH</div>
+        <pre>summaries/log_summary_<span class="n">123</span>.json</pre>
+      </div>
+    </div>
+  </div></div>
+
+  <div class="conn" style="--fc:var(--orangeL);--tc:var(--purple)">
+    <div class="conn-top-dot" style="--fc:var(--orangeL)"></div>
+    <div class="conn-pipe" style="--spd:1.1s;--dlay:.05s"></div>
+    <div class="conn-mid">Summary read by AI</div>
+    <div class="conn-pipe-b" style="--spd:1.1s;--dlay:.55s"></div>
+    <div class="conn-arrowhead" style="--tc:var(--purple)"></div>
+  </div>
+
+  <!-- 06 BEDROCK -->
+  <div class="node"><div class="card" style="--ac:var(--purple)">
+    <div class="card-glow" style="background:linear-gradient(90deg,transparent,var(--purple),transparent)"></div><div class="step-ghost">06</div>
+    <div class="card-body">
+      <div class="card-head">
+        <div class="svc-icon"><svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="10" stroke="#A97FFF" stroke-width="1.5"/><circle cx="20" cy="20" r="5" stroke="#A97FFF" stroke-width="1" opacity=".5"/><circle cx="20" cy="20" r="2" fill="#A97FFF"/><path d="M20 10v-3M20 33v-3M10 20H7M33 20h-3" stroke="#A97FFF" stroke-width="1.5" stroke-linecap="round"/><path d="M13 13l-2-2M29 13l2-2M13 27l-2 2M29 27l2 2" stroke="#A97FFF" stroke-width="1" stroke-linecap="round" opacity=".5"/></svg></div>
+        <div class="head-text">
+          <div class="layer-tag" style="color:var(--purple)">LAYER 06 — AI INTELLIGENCE CORE</div>
+          <div class="card-title">Amazon Bedrock <small>Agent + Action Lambda integration</small></div>
+        </div>
+      </div>
+      <div class="card-desc">The brain. Bedrock Agent drives intelligent log analysis while the Action Lambda bridges data retrieval and model invocation — detecting patterns, grouping errors, and generating structured email-ready reports.</div>
+      <div class="twin">
+        <div class="twin-cell">
+          <div class="twin-cell-label">BEDROCK AGENT</div>
+          <div class="twin-cell-name">AI Analysis Engine</div>
+          <div class="twin-cell-desc">Issue detection · Timing extraction · Error grouping · Report generation</div>
+        </div>
+        <div class="twin-mid"><div style="width:1px;height:20px;background:var(--border2)"></div><span>↔</span><div style="width:1px;height:20px;background:var(--border2)"></div></div>
+        <div class="twin-cell">
+          <div class="twin-cell-label">ACTION LAMBDA</div>
+          <div class="twin-cell-name">log-analysis-actions-nq4of</div>
+          <div class="twin-cell-desc">Read latest summary · Feed logs to model · Return email content</div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+
+  <div class="conn" style="--fc:var(--purple);--tc:var(--pink)">
+    <div class="conn-top-dot" style="--fc:var(--purple)"></div>
+    <div class="conn-pipe" style="--spd:1.0s;--dlay:.15s"></div>
+    <div class="conn-mid">AI report dispatched</div>
+    <div class="conn-pipe-b" style="--spd:1.0s;--dlay:.6s"></div>
+    <div class="conn-arrowhead" style="--tc:var(--pink)"></div>
+  </div>
+
+  <!-- 07 SNS -->
+  <div class="node"><div class="card" style="--ac:var(--pink)">
+    <div class="card-glow" style="background:linear-gradient(90deg,transparent,var(--pink),transparent)"></div><div class="step-ghost">07</div>
+    <div class="card-body">
+      <div class="card-head">
+        <div class="svc-icon"><svg viewBox="0 0 40 40" fill="none"><path d="M8 30V15l12-7 12 7v15" stroke="#FF5FA0" stroke-width="1.5"/><path d="M8 15l12 7 12-7" stroke="#FF5FA0" stroke-width="1.5"/><rect x="15" y="21" width="10" height="9" rx="2" stroke="#FF5FA0" stroke-width="1.5"/><path d="M20 30v4" stroke="#FF5FA0" stroke-width="1.5" stroke-linecap="round"/><path d="M17 34h6" stroke="#FF5FA0" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+        <div class="head-text">
+          <div class="layer-tag" style="color:var(--pink)">LAYER 07 — NOTIFICATION DELIVERY</div>
+          <div class="card-title">Amazon SNS <small>Email alert — final output</small></div>
+        </div>
+      </div>
+      <div class="card-desc">The AI-generated log analysis report lands directly in your inbox — concise, grouped, actionable. Error frequencies, timing patterns, and anomalies summarized by Bedrock, delivered instantly.</div>
+      <div class="codeblock">
+        <div class="cbh">SAMPLE EMAIL OUTPUT</div>
+        <pre><span class="n">00:00</span> — FilterLiveRow exception      <span class="s">(23×)</span>
+<span class="n">02:14</span> — NullPointerException          <span class="v">( 7×)</span>
+<span class="n">04:38</span> — DB connection timeout         <span class="v">( 3×)</span>
+<span class="n">08:52</span> — AuthToken expired             <span class="v">( 1×)</span></pre>
+      </div>
+      <div class="tags">
+        <span class="tag hi" style="--acr:255,95,160;--ac:var(--pink)">Email delivery</span>
+        <span class="tag">AI-generated content</span>
+        <span class="tag">Grouped by pattern</span>
+        <span class="tag">Timestamped</span>
+      </div>
+    </div>
+  </div></div>
+
+</div>
+
+<footer><em>AI Powered Log Analysis Agent</em> · AWS Serverless · Bedrock · DynamoDB · SNS · Built with ♥</footer>
+
+<script>
+const cv=document.getElementById('canvas'),cx=cv.getContext('2d');
+let W,H,pts=[];
+function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight}
+resize();addEventListener('resize',resize);
+const cols=['rgba(77,159,255,','rgba(169,127,255,','rgba(0,229,195,','rgba(255,154,0,','rgba(255,95,160,'];
+function mkpt(){return{x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.22,vy:(Math.random()-.5)*.22,r:Math.random()*1.4+.4,a:Math.random()*.5+.1,col:cols[Math.floor(Math.random()*cols.length)]}}
+for(let i=0;i<80;i++)pts.push(mkpt());
+(function frame(){
+  cx.clearRect(0,0,W,H);
+  pts.forEach(p=>{
+    p.x+=p.vx;p.y+=p.vy;
+    if(p.x<0||p.x>W)p.vx*=-1;
+    if(p.y<0||p.y>H)p.vy*=-1;
+    cx.beginPath();cx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    cx.fillStyle=p.col+p.a+')';cx.fill();
+  });
+  for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
+    const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);
+    if(d<110){cx.beginPath();cx.moveTo(pts[i].x,pts[i].y);cx.lineTo(pts[j].x,pts[j].y);cx.strokeStyle='rgba(77,120,200,'+(1-d/110)*.06+')';cx.lineWidth=.5;cx.stroke()}
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
